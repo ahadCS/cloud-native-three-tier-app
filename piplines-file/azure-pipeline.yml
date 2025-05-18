@@ -1,0 +1,115 @@
+trigger:
+ - main
+
+pool:
+  vmImage: 'ubuntu-latest'
+
+variables:
+  nodeVersion: '20.x'
+  dockerRegistryServiceConnection: 'dockerhub_connection'
+  dockerhub_username: ahad8
+  backendImageRepository: 'authentication-backend'
+  frontendImageRepository: 'authentication-frontend'
+  tag: '$(Build.BuildId)'
+
+stages:
+
+- stage: Build_Test_Scan_Dockerize
+  displayName: 'Stage 1 - Build, Test, Scan, Dockerize, Push'
+  jobs:
+
+    ## ---------- Backend Job ----------
+    - job: Backend
+      displayName: 'Backend - Build, Test, Scan, Dockerize'
+      steps:
+        - task: NodeTool@0
+          inputs:
+            versionSpec: '$(nodeVersion)'
+          displayName: 'Use Node.js $(nodeVersion)'
+
+        - task: SonarQubePrepare@7
+          inputs:
+            SonarQube: 'sonarqube_connection'
+            scannerMode: 'CLI'
+            configMode: 'manual'
+            cliProjectKey: 'backend-auth-key'
+            cliProjectName: 'Authentication Backend'
+            cliSources: 'authentication_app_backend.group_three'
+          displayName: 'Prepare SonarQube for Backend'
+
+        - script: |
+            cd authentication_app_backend.group_three
+            npm install
+          displayName: 'Install Backend Dependencies'
+
+        - task: SonarQubeAnalyze@7
+          displayName: 'Run Backend SonarQube Analysis'
+
+        - script: |
+            cd authentication_app_backend.group_three
+            npm test
+          displayName: 'Run Backend Tests'
+
+        - task: SonarQubePublish@7
+          inputs:
+            pollingTimeoutSec: '300'
+          displayName: 'Publish Backend SonarQube Results'
+
+        - task: Docker@2
+          displayName: 'Build & Push Backend Image'
+          inputs:
+            containerRegistry: '$(dockerRegistryServiceConnection)'
+            repository: '$(dockerhub_username)/$(backendImageRepository)'
+            command: 'buildAndPush'
+            Dockerfile: 'authentication_app_backend.group_three/Dockerfile'
+            tags: |
+              latest
+              $(tag)
+
+    ## ---------- Frontend Job ----------
+    - job: Frontend
+      displayName: 'Frontend - Build, Test, Scan, Dockerize'
+      steps:
+        - task: NodeTool@0
+          inputs:
+            versionSpec: '$(nodeVersion)'
+          displayName: 'Use Node.js $(nodeVersion)'
+
+        - task: SonarQubePrepare@7
+          inputs:
+            SonarQube: 'sonarqube_connection'
+            scannerMode: 'CLI'
+            configMode: 'manual'
+            cliProjectKey: 'frontend-auth-key'
+            cliProjectName: 'Authentication Frontend'
+            cliSources: 'authentication_app_frontend.group_three'
+          displayName: 'Prepare SonarQube for Frontend'
+
+        - script: |
+            cd authentication_app_frontend.group_three
+            npm install
+          displayName: 'Install Frontend Dependencies'
+
+        - task: SonarQubeAnalyze@7
+          displayName: 'Run Frontend SonarQube Analysis'
+
+        - script: |
+            cd authentication_app_frontend.group_three
+            npm test
+          displayName: 'Run Frontend Tests'
+
+        - task: SonarQubePublish@7
+          inputs:
+            pollingTimeoutSec: '300'
+          displayName: 'Publish Frontend SonarQube Results'
+
+        - task: Docker@2
+          displayName: 'Build & Push Frontend Image'
+          inputs:
+            containerRegistry: '$(dockerRegistryServiceConnection)'
+            repository: '$(dockerhub_username)/$(frontendImageRepository)'
+            command: 'buildAndPush'
+            Dockerfile: 'authentication_app_frontend.group_three/Dockerfile'
+            tags: |
+              latest
+              $(tag)
