@@ -77,7 +77,7 @@ stages:
 
         - task: SonarQubePrepare@7
           inputs:
-            SonarQube: 'sonarqube_connection'
+            SonarQube: 'sonarqube-f-connection'
             scannerMode: 'CLI'
             configMode: 'manual'
             cliProjectKey: 'frontend-auth-key'
