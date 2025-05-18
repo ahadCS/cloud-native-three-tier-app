@@ -34,11 +34,11 @@ stages:
             configMode: 'manual'
             cliProjectKey: 'backend-auth-key'
             cliProjectName: 'Authentication Backend'
-            cliSources: 'authentication_app_backend.group_three'
+            cliSources: 'authentication_app_backend.gr3'
           displayName: 'Prepare SonarQube for Backend'
 
         - script: |
-            cd authentication_app_backend.group_three
+            cd authentication_app_backend.gr3
             npm install
           displayName: 'Install Backend Dependencies'
 
@@ -46,7 +46,7 @@ stages:
           displayName: 'Run Backend SonarQube Analysis'
 
         - script: |
-            cd authentication_app_backend.group_three
+            cd authentication_app_backend.gr3
             npm test
           displayName: 'Run Backend Tests'
 
@@ -61,7 +61,7 @@ stages:
             containerRegistry: '$(dockerRegistryServiceConnection)'
             repository: '$(dockerhub_username)/$(backendImageRepository)'
             command: 'buildAndPush'
-            Dockerfile: 'authentication_app_backend.group_three/Dockerfile'
+            Dockerfile: 'authentication_app_backend.gr3/Dockerfile'
             tags: |
               latest
               $(tag)
@@ -82,11 +82,11 @@ stages:
             configMode: 'manual'
             cliProjectKey: 'frontend-auth-key'
             cliProjectName: 'Authentication Frontend'
-            cliSources: 'authentication_app_frontend.group_three'
+            cliSources: 'authentication_app_frontend.gr3'
           displayName: 'Prepare SonarQube for Frontend'
 
         - script: |
-            cd authentication_app_frontend.group_three
+            cd authentication_app_frontend.gr3
             npm install
           displayName: 'Install Frontend Dependencies'
 
@@ -94,7 +94,7 @@ stages:
           displayName: 'Run Frontend SonarQube Analysis'
 
         - script: |
-            cd authentication_app_frontend.group_three
+            cd authentication_app_frontend.gr3
             npm test
           displayName: 'Run Frontend Tests'
 
@@ -109,7 +109,7 @@ stages:
             containerRegistry: '$(dockerRegistryServiceConnection)'
             repository: '$(dockerhub_username)/$(frontendImageRepository)'
             command: 'buildAndPush'
-            Dockerfile: 'authentication_app_frontend.group_three/Dockerfile'
+            Dockerfile: 'authentication_app_frontend.gr3/Dockerfile'
             tags: |
               latest
               $(tag)
