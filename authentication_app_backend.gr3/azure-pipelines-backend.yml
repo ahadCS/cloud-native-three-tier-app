@@ -1,0 +1,70 @@
+trigger: none        # do not auto-trigger on commits
+pr: none             # do not auto-trigger on PRs
+
+variables:
+  AZURE_SERVICE_CONNECTION: 'Azure-subscription'         # name of Service Connection
+  DOCKER_CONNECTION: 'dockerhub_connection'              # Docker Registry service connection
+  dockerHubUsername: 'ahad8'                             # Docker Hub username
+  IMAGE_NAME: 'backend'                                 # repo name on Docker Hub
+  TAG: '$(Build.BuildId)'                                # image tag based on build ID
+
+pool:
+  vmImage: 'ubuntu-latest'
+
+stages:
+# === Stage: Build & Push Image to Docker Hub ===
+- stage: Build
+  displayName: 'Build & Test & Push Backend Image'
+  jobs:
+  - job: Build
+    displayName: 'Build'
+    steps:
+      - checkout: self
+
+      - task: SonarQubePrepare@5
+        displayName: 'Prepare SonarQube Analysis'
+        inputs:
+          SonarQube: 'sonarqube-b-connection'      #  Service Connection
+          scannerMode: 'CLI'
+          configMode: 'manual'
+          cliProjectKey: 'Authentication-Backend'
+          cliProjectName: 'Authentication Backend'
+          extraProperties: |
+            sonar.projectBaseDir=authentication_app_backend.gr3
+            sonar.sources=.
+
+      - task: NodeTool@0
+        displayName: 'Install Node.js'
+        inputs:
+          versionSpec: '18.x'
+
+      - script: |
+          cd authentication_app_backend.gr3
+          npm install
+          npm run build
+        displayName: 'Build Backend'
+
+      - task: SonarQubeAnalyze@5
+        displayName: 'Run SonarQube Analysis'
+
+      - task: SonarQubePublish@5
+        displayName: 'Publish SonarQube Results'
+        inputs:
+          pollingTimeoutSec: '300'
+
+      - task: Docker@2
+        displayName: 'Login to Docker Hub'
+        inputs:
+          containerRegistry: '$(DOCKER_CONNECTION)'
+          command: login
+
+      - task: Docker@2
+        displayName: 'Build & Push to Docker Hub'
+        inputs:
+          containerRegistry: '$(DOCKER_CONNECTION)'
+          repository: '$(dockerHubUsername)/$(IMAGE_NAME)'
+          command: buildAndPush
+          dockerfile: 'authentication_app_backend.gr3/Dockerfile'
+          buildContext: 'authentication_app_backend.gr3'
+          tags: |
+            $(TAG)
