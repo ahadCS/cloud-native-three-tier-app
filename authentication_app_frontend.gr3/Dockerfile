@@ -1,19 +1,22 @@
+# Use official Node.js image
 FROM node:latest
 
-# Create app directory
+# Set the working directory
 WORKDIR /usr/src/app
 
-# Install app dependencies
-# A wildcard is used to ensure both package.json AND package-lock.json are copied
+# Copy package.json and package-lock.json first (for caching)
 COPY package*.json ./
+
+# Install dependencies
 RUN npm install
 
-# Bundle app source - Copy all the code from host machine to docker image
+# Copy the rest of the application files
 COPY . .
+
 RUN npm run build
 
-#  Expose the port 3000 to enable communication inside the container
+# Expose the backend port
 EXPOSE 3000
 
-# Start the application with npm start command
-CMD [ "npm", "start" ]
+# Start the application
+CMD ["npm", "start"]

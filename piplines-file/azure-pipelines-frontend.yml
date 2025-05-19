@@ -5,7 +5,7 @@ variables:
   AZURE_SERVICE_CONNECTION: 'azure-connection'
   DOCKER_CONNECTION: 'dockerhub_connection'
   dockerHubUsername: 'ahad8'
-  IMAGE_NAME: 'frontendim'
+  IMAGE_NAME: 'frontend'
   TAG: '$(Build.BuildId)'
   RESOURCE_GROUP: 'devops2-group3-main-rg'
   AKS_CLUSTER_NAME: 'devops2-group3-main-aks'
@@ -16,11 +16,70 @@ pool:
   vmImage: 'ubuntu-latest'
 
 stages:
+- stage: Build
+  displayName: 'Build & Test & Push Frontend Image'
+  jobs:
+  - job: Build
+    displayName: 'Build'
+    steps:
+      - checkout: self
+
+      - task: SonarQubePrepare@5
+        displayName: 'Prepare SonarQube Analysis'
+        inputs:
+          SonarQube: 'sonarqube-f-connection'      
+          scannerMode: 'CLI'
+          configMode: 'manual'
+          cliProjectKey: 'Authentication-Frontend'
+          cliProjectName: 'Authentication Frontend'
+          extraProperties: |
+            sonar.projectBaseDir=authentication_app_frontend.gr3
+            sonar.sources=.
+
+      - task: NodeTool@0
+        displayName: 'Install Node.js'
+        inputs:
+          versionSpec: '18.x'
+
+      - script: |
+          cd authentication_app_frontend.gr3
+          npm install
+          npm run build
+        displayName: 'Build Frontend'
+
+      - task: SonarQubeAnalyze@5
+        displayName: 'Run SonarQube Analysis'
+
+      - task: SonarQubePublish@5
+        displayName: 'Publish SonarQube Results'
+        inputs:
+          pollingTimeoutSec: '300'
+
+
+      - task: Docker@2
+        displayName: 'Login to Docker Hub'
+        inputs:
+          containerRegistry: '$(DOCKER_CONNECTION)'
+          command: login
+
+      # خطوة بناء الصورة تنفذ فقط إذا ما كانت موجودة
+      - task: Docker@2
+        displayName: 'Build & Push to Docker Hub'
+        inputs:
+          containerRegistry: '$(DOCKER_CONNECTION)'
+          repository: '$(dockerHubUsername)/$(IMAGE_NAME)'
+          command: buildAndPush
+          dockerfile: 'authentication_app_frontend.gr3/Dockerfile'
+          buildContext: 'authentication_app_frontend.gr3'
+          tags: |
+            $(TAG)
+            latest
+
 
 # === Stage: Deploy to AKS ===
 - stage: Deploy
   displayName: 'Deploy Frontend to AKS'
-  # حذفنا dependsOn هنا
+  dependsOn: Build
   jobs:
   - job: Deploy
     displayName: 'Apply Kubernetes Manifests'
