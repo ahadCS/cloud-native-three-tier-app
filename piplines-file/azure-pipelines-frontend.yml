@@ -114,4 +114,8 @@ stages:
           # apply Ingress again
           kubectl apply -f $(K8S_DIR)/frontend_ingress.yml
         displayName: 'Apply Frontend Manifests'
-
+      - script: |
+         echo "Checking Ingress in namespace capstone-project..."
+         kubectl get ingress -n capstone-project
+        displayName: 'Check Ingress Status'
+    
