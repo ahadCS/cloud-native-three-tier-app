@@ -118,6 +118,9 @@ stages:
       - script: |
          echo "Checking Pod status..."
          kubectl get pods -n capstone-project -o wide
+         kubectl get pods -n ingress-nginx
+         kubectl get svc -n ingress-nginx
+
         displayName: 'Check Pod Status'
 
       - script: |
