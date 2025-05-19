@@ -4,14 +4,15 @@ metadata:
   name: frontend-ingress
   namespace: capstone-project
   annotations:
-    nginx.ingress.kubernetes.io/use-regex: "true"
+    nginx.ingress.kubernetes.io/use-regex: "false"
 spec:
   ingressClassName: nginx
   rules:
-  - http:
+  - host: frontend.example.com
+    http:
       paths:
-      - path: /(.*)
-        pathType: ImplementationSpecific
+      - path: /
+        pathType: Prefix
         backend:
           service:
             name: frontend-clusterip-service

@@ -109,11 +109,17 @@ stages:
           kubectl apply -f $(K8S_DIR)/frontend_cluster_ip.yml
 
           # delete old Ingress(if there's a one) to avoid conflict 
-          kubectl delete ingress frontend-ingress -n $(NAMESPACE) || true
+          kubectl delete ingress frontend-ingress -n capstone-project || true
+
 
           # apply Ingress again
           kubectl apply -f $(K8S_DIR)/frontend_ingress.yml
         displayName: 'Apply Frontend Manifests'
+      - script: |
+         echo "Checking Pod status..."
+         kubectl get pods -n capstone-project -o wide
+        displayName: 'Check Pod Status'
+
       - script: |
          echo "Checking Ingress in namespace capstone-project..."
          kubectl get ingress -n capstone-project
