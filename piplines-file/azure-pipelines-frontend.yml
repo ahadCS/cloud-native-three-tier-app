@@ -97,34 +97,42 @@ stages:
               --overwrite-existing
             kubectl config current-context
 
-      # 3)  apply Namespace
+      # Apply Namespace
       - script: |
           kubectl apply -f $(K8S_DIR)/namespace.yml
         displayName: 'Apply Namespace'
 
-      # 4)  Deployment + Service +delete old ingress if any and apply ingress
+      # Apply Deployment, Service, Ingress
       - script: |
-        
           kubectl apply -f $(K8S_DIR)/frontend_deploy.yml
           kubectl apply -f $(K8S_DIR)/frontend_cluster_ip.yml
-
-          # delete old Ingress(if there's a one) to avoid conflict 
           kubectl delete ingress frontend-ingress -n capstone-project || true
-
-
-          # apply Ingress again
           kubectl apply -f $(K8S_DIR)/frontend_ingress.yml
         displayName: 'Apply Frontend Manifests'
+
+      - script: |
+          echo "Waiting for ingress to be ready..."
+          sleep 10
+        displayName: 'Wait for Ingress Propagation'
+        
       - script: |
          echo "Checking Pod status..."
          kubectl get pods -n capstone-project -o wide
          kubectl get pods -n ingress-nginx
          kubectl get svc -n ingress-nginx
-
         displayName: 'Check Pod Status'
 
       - script: |
          echo "Checking Ingress in namespace capstone-project..."
          kubectl get ingress -n capstone-project
         displayName: 'Check Ingress Status'
-    
+
+      - script: |
+         echo "Getting Ingress IP..."
+         IP=$(kubectl get ingress frontend-ingress -n capstone-project -o jsonpath='{.status.loadBalancer.ingress[0].ip}')
+         if [ -z "$IP" ]; then
+           echo " Ingress IP not assigned yet."
+         else
+           echo " Application should be accessible at: http://$IP"
+         fi
+        displayName: 'Show Ingress External IP'

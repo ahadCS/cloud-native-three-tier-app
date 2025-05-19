@@ -6,7 +6,7 @@ metadata:
   annotations:
     nginx.ingress.kubernetes.io/use-regex: "false"
 spec:
-  ingressClassName: nginx
+  ingressClassName: ingress-nginx 
   rules:
   - host: frontend.example.com
     http:
