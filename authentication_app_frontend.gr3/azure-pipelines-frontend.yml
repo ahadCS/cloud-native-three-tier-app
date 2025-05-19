@@ -1,5 +1,5 @@
-trigger:
-- master
+trigger: none        # do not auto-trigger on commits
+pr: none             # do not auto-trigger on PRs
 
 variables:
   AZURE_SERVICE_CONNECTION: 'Azure-subscription'         # name of Service Connection
