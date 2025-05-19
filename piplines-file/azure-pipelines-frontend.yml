@@ -120,6 +120,8 @@ stages:
          kubectl get pods -n ingress-nginx
          kubectl get svc -n capstone-project
          kubectl get svc -n ingress-nginx
+         kubectl describe pod frontend-deploy-5f6c48bdc-7k4h9 -n capstone-project
+
         displayName: 'Check Pod Status'
 
       - script: |
