@@ -21,7 +21,7 @@ spec:
         pathType: Prefix
         backend:
           service:
-            name: grafana-lb
+            name: grafana
             port:
               number: 3000
   - host: prometheus.example.com
@@ -31,6 +31,6 @@ spec:
         pathType: Prefix
         backend:
           service:
-            name: prometheus-lb
+            name: prometheus
             port:
               number: 9090
