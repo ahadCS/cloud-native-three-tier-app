@@ -20,7 +20,7 @@ stages:
 # === Stage: Deploy to AKS ===
 - stage: Deploy
   displayName: 'Deploy Frontend to AKS'
-  dependsOn: Build
+  # حذفنا dependsOn هنا
   jobs:
   - job: Deploy
     displayName: 'Apply Kubernetes Manifests'
