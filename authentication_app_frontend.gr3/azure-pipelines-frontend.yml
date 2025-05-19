@@ -7,7 +7,11 @@ variables:
   dockerHubUsername: 'ahad8'                             # Docker Hub username
   IMAGE_NAME: 'frontend'                                 # repo name on Docker Hub
   TAG: '$(Build.BuildId)'                                # image tag based on build ID
-
+  RESOURCE_GROUP:     'devops2-group3-main-rg'   # RG that contains AKS
+  AKS_CLUSTER_NAME:   'devops2-group3-main-aks'  #  AKS cluster name
+  K8S_DIR:            '../../manifests/kubernetes'                        # path to K8s manifests
+  NAMESPACE:          'capstone-project'   
+     
 pool:
   vmImage: 'ubuntu-latest'
 
@@ -68,3 +72,46 @@ stages:
           buildContext: 'authentication_app_frontend.gr3'
           tags: |
             $(TAG)
+  # === Stage: Deploy to AKS ===
+- stage: Deploy
+  displayName: 'Deploy Frontend to AKS'
+  dependsOn: Build
+  jobs:
+  - job: Deploy
+    displayName: 'Apply Kubernetes Manifests'
+    steps:
+      - checkout: self
+
+      # Get AKS Credentials
+      - task: AzureCLI@2
+        displayName: 'Get AKS Credentials'
+        inputs:
+          azureSubscription: '$(AZURE_SERVICE_CONNECTION)'
+          scriptType: bash
+          scriptLocation: inlineScript
+          inlineScript: |
+            az aks get-credentials \
+              --resource-group $(RESOURCE_GROUP) \
+              --name $(AKS_CLUSTER_NAME) \
+              --admin \
+              --overwrite-existing
+            kubectl config current-context
+
+      # 3)  apply Namespace
+      - script: |
+          kubectl apply -f $(K8S_DIR)/namespace.yml
+        displayName: 'Apply Namespace'
+
+      # 4)  Deployment + Service +delete old ingress if any and apply ingress
+      - script: |
+        
+          kubectl apply -f $(K8S_DIR)/frontend_deploy.yml
+          kubectl apply -f $(K8S_DIR)/frontend_cluster_ip.yml
+
+          # delete old Ingress(if there's a one) to avoid conflict 
+          kubectl delete ingress frontend-ingress -n $(NAMESPACE) || true
+
+          # apply Ingress again
+          kubectl apply -f $(K8S_DIR)/frontend_ingress.yml
+        displayName: 'Apply Frontend Manifests'
+
