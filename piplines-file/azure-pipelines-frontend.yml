@@ -72,6 +72,7 @@ stages:
           buildContext: 'authentication_app_frontend.gr3'
           tags: |
             $(TAG)
+            latest
   # === Stage: Deploy to AKS ===
 - stage: Deploy
   displayName: 'Deploy Frontend to AKS'

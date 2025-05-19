@@ -2,17 +2,17 @@ apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
   name: frontend-ingress
-  namespace: capstone-project
+  namespace: final-project
   annotations:
-    nginx.ingress.kubernetes.io/use-regex: "false"
+    nginx.ingress.kubernetes.io/use-regex: "true"
 spec:
-  ingressClassName: ingress-nginx 
+  ingressClassName: ingress-nginx
+
   rules:
-  - host: frontend.example.com
-    http:
+  - http:
       paths:
-      - path: /
-        pathType: Prefix
+      - path: /(.*)
+        pathType: ImplementationSpecific
         backend:
           service:
             name: frontend-clusterip-service
