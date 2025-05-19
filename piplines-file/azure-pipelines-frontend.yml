@@ -9,7 +9,7 @@ variables:
   TAG: '$(Build.BuildId)'                                # image tag based on build ID
   RESOURCE_GROUP:     'devops2-group3-main-rg'   # RG that contains AKS
   AKS_CLUSTER_NAME:   'devops2-group3-main-aks'  #  AKS cluster name
-  K8S_DIR:            '../../manifests/kubernetes'                        # path to K8s manifests
+  K8S_DIR:            '../manifests/kubernetes'                        # path to K8s manifests
   NAMESPACE:          'capstone-project'   
      
 pool:
