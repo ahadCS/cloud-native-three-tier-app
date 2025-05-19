@@ -2,7 +2,7 @@ trigger: none        # do not auto-trigger on commits
 pr: none             # do not auto-trigger on PRs
 
 variables:
-  AZURE_SERVICE_CONNECTION: 'Azure-subscription'         # name of Service Connection
+  AZURE_SERVICE_CONNECTION: 'azure-connection'         # name of Service Connection
   DOCKER_CONNECTION: 'dockerhub_connection'              # Docker Registry service connection
   dockerHubUsername: 'ahad8'                             # Docker Hub username
   IMAGE_NAME: 'backend'                                 # repo name on Docker Hub
