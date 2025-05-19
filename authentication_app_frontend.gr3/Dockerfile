@@ -1,11 +1,19 @@
-# Use an official Nginx runtime as the base image
-FROM nginx:alpine
+FROM node:latest
 
-# Copy your frontend files (HTML, JavaScript, CSS, etc.) to the default Nginx web root directory
-COPY . /usr/share/nginx/html
+# Create app directory
+WORKDIR /usr/src/app
 
-# Expose port 80, which Nginx will listen on
-EXPOSE 80
+# Install app dependencies
+# A wildcard is used to ensure both package.json AND package-lock.json are copied
+COPY package*.json ./
+RUN npm install
 
-# Start Nginx when the container is run
-CMD ["nginx", "-g", "daemon off;"]
+# Bundle app source - Copy all the code from host machine to docker image
+COPY . .
+RUN npm run build
+
+#  Expose the port 3000 to enable communication inside the container
+EXPOSE 3000
+
+# Start the application with npm start command
+CMD [ "npm", "start" ]
