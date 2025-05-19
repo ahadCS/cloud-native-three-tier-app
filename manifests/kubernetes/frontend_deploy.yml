@@ -1,23 +1,35 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: frontend-deploy
-  labels:
-    app: frontend-app
-  namespace: capstone-project
+ name: frontend-deployment
+ labels:
+   app: frontend-app
+ namespace: capstone-project
 spec:
-  replicas: 3
-  selector:
-    matchLabels:
-      app: frontend-app
-  template:
-    metadata:
-      name: frontend-app
-      labels:
-        app: frontend-app
-    spec:
-      containers:
-        - name: frontend-app
-          image: ahad8/frontend:latest
-          ports:
-            - containerPort: 3000
+ replicas: 2
+ selector:
+   matchLabels:
+     app: frontend-app
+ template:
+   metadata:
+     name: frontend-app
+     labels:
+       app: frontend-app
+   spec:
+     volumes:
+       - name: config
+         configMap:
+           name: frontend-configmap
+           items:
+             - key: config.json
+               path: config.json
+     containers:
+       - name: frontend-app
+         image: ahad8/frontend:latest
+         ports:
+           - containerPort: 3000
+         volumeMounts:
+           - name: config
+             mountPath: /usr/share/nginx/html/config.json
+             subPath: config.json
+             readOnly: true

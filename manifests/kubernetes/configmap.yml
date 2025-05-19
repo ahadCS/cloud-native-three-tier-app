@@ -1,0 +1,10 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+ name: frontend-configmap
+ namespace: capstone-project
+data:
+ config.json: |
+   {
+     "API_URL": "http://backend.project.svc.cluster.local/backend/"
+   }
