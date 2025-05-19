@@ -1,4 +1,4 @@
-FROM node:latest
+FROM node:23-alpine3.20
 
 # Create app directory
 WORKDIR /usr/src/app
@@ -10,6 +10,7 @@ RUN npm install
 
 # Bundle app source - Copy all the code from host machine to docker image
 COPY . .
+RUN npm run build
 
 #  Expose the port 3000 to enable communication inside the container
 EXPOSE 3000
