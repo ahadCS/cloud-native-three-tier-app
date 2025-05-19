@@ -2,21 +2,20 @@ trigger: none        # do not auto-trigger on commits
 pr: none             # do not auto-trigger on PRs
 
 variables:
-  AZURE_SERVICE_CONNECTION: 'azure-connection'         # name of Service Connection
-  DOCKER_CONNECTION: 'dockerhub_connection'              # Docker Registry service connection
-  dockerHubUsername: 'ahad8'                             # Docker Hub username
-  IMAGE_NAME: 'frontendim'                                 # repo name on Docker Hub
-  TAG: '$(Build.BuildId)'                                # image tag based on build ID
-  RESOURCE_GROUP:     'devops2-group3-main-rg'   # RG that contains AKS
-  AKS_CLUSTER_NAME:   'devops2-group3-main-aks'  #  AKS cluster name
-  K8S_DIR:            'manifests/kubernetes'                        # path to K8s manifests
-  NAMESPACE:          'capstone-project'   
-     
+  AZURE_SERVICE_CONNECTION: 'azure-connection'
+  DOCKER_CONNECTION: 'dockerhub_connection'
+  dockerHubUsername: 'ahad8'
+  IMAGE_NAME: 'frontendim'
+  TAG: '$(Build.BuildId)'
+  RESOURCE_GROUP: 'devops2-group3-main-rg'
+  AKS_CLUSTER_NAME: 'devops2-group3-main-aks'
+  K8S_DIR: 'manifests/kubernetes'
+  NAMESPACE: 'capstone-project'
+
 pool:
   vmImage: 'ubuntu-latest'
 
 stages:
-# === Stage: Build & Push Image to Docker Hub ===
 - stage: Build
   displayName: 'Build & Test & Push Frontend Image'
   jobs:
@@ -56,14 +55,29 @@ stages:
         inputs:
           pollingTimeoutSec: '300'
 
+      # خطوة تحقق من وجود الصورة في Docker Hub
+      - script: |
+          echo "Checking if Docker image exists on Docker Hub..."
+          TAG_EXISTS=$(curl -s -o /dev/null -w "%{http_code}" "https://hub.docker.com/v2/repositories/$(dockerHubUsername)/$(IMAGE_NAME)/tags/$(TAG)/")
+          if [ "$TAG_EXISTS" = "200" ]; then
+            echo "Image $(dockerHubUsername)/$(IMAGE_NAME):$(TAG) already exists."
+            echo "##vso[task.setvariable variable=ImageExists]true"
+          else
+            echo "Image does not exist. Need to build."
+            echo "##vso[task.setvariable variable=ImageExists]false"
+          fi
+        displayName: 'Check if Docker image exists on Docker Hub'
+
       - task: Docker@2
         displayName: 'Login to Docker Hub'
         inputs:
           containerRegistry: '$(DOCKER_CONNECTION)'
           command: login
 
+      # خطوة بناء الصورة تنفذ فقط إذا ما كانت موجودة
       - task: Docker@2
         displayName: 'Build & Push to Docker Hub'
+        condition: ne(variables['ImageExists'], 'true')   # لو الصورة موجودة يتخطى
         inputs:
           containerRegistry: '$(DOCKER_CONNECTION)'
           repository: '$(dockerHubUsername)/$(IMAGE_NAME)'
@@ -73,7 +87,13 @@ stages:
           tags: |
             $(TAG)
             latest
-  # === Stage: Deploy to AKS ===
+
+      # خطوة توضح أن البناء تم تخطيه (اختيارية)
+      - script: echo "Docker image already exists, skipping build."
+        condition: eq(variables['ImageExists'], 'true')
+        displayName: 'Skip Docker Build'
+
+# === Stage: Deploy to AKS ===
 - stage: Deploy
   displayName: 'Deploy Frontend to AKS'
   dependsOn: Build
@@ -83,7 +103,6 @@ stages:
     steps:
       - checkout: self
 
-      # Get AKS Credentials
       - task: AzureCLI@2
         displayName: 'Get AKS Credentials'
         inputs:
@@ -98,12 +117,10 @@ stages:
               --overwrite-existing
             kubectl config current-context
 
-      # Apply Namespace
       - script: |
           kubectl apply -f $(K8S_DIR)/namespace.yml
         displayName: 'Apply Namespace'
 
-      # Apply Deployment, Service, Ingress
       - script: |
           kubectl apply -f $(K8S_DIR)/frontend_cluster_ip.yml
           kubectl apply -f $(K8S_DIR)/frontend_deploy.yml
@@ -116,26 +133,25 @@ stages:
         displayName: 'Wait for Ingress Propagation'
 
       - script: |
-         echo "Checking Pod status..."
-         kubectl get pods -n capstone-project -o wide
-         kubectl get pods -n ingress-nginx
-         kubectl get svc -n capstone-project
-         kubectl get svc -n ingress-nginx
-         kubectl describe pod frontend-deploy-5f6c48bdc-7k4h9 -n capstone-project
-
+          echo "Checking Pod status..."
+          kubectl get pods -n capstone-project -o wide
+          kubectl get pods -n ingress-nginx
+          kubectl get svc -n capstone-project
+          kubectl get svc -n ingress-nginx
+          kubectl describe pod frontend-deploy-5f6c48bdc-7k4h9 -n capstone-project
         displayName: 'Check Pod Status'
 
       - script: |
-         echo "Checking Ingress in namespace capstone-project..."
-         kubectl get ingress -n capstone-project
+          echo "Checking Ingress in namespace capstone-project..."
+          kubectl get ingress -n capstone-project
         displayName: 'Check Ingress Status'
 
       - script: |
-         echo "Getting Ingress IP..."
-         IP=$(kubectl get ingress frontend-ingress -n capstone-project -o jsonpath='{.status.loadBalancer.ingress[0].ip}')
-         if [ -z "$IP" ]; then
-           echo " Ingress IP not assigned yet."
-         else
-           echo " Application should be accessible at: http://$IP"
-         fi
+          echo "Getting Ingress IP..."
+          IP=$(kubectl get ingress frontend-ingress -n capstone-project -o jsonpath='{.status.loadBalancer.ingress[0].ip}')
+          if [ -z "$IP" ]; then
+            echo "Ingress IP not assigned yet."
+          else
+            echo "Application should be accessible at: http://$IP"
+          fi
         displayName: 'Show Ingress External IP'
