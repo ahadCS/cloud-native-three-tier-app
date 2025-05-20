@@ -17,25 +17,13 @@ pool:
 
 stages:
 - stage: Build
-  displayName: 'Build & Test & Push Frontend Image'
+  displayName: 'Build & Push Frontend Image'
   jobs:
   - job: Build
     displayName: 'Build'
     steps:
       - checkout: self
-
-      - task: SonarQubePrepare@5
-        displayName: 'Prepare SonarQube Analysis'
-        inputs:
-          SonarQube: 'sonarqube-f-connection'      
-          scannerMode: 'CLI'
-          configMode: 'manual'
-          cliProjectKey: 'Authentication-Frontend'
-          cliProjectName: 'Authentication Frontend'
-          extraProperties: |
-            sonar.projectBaseDir=authentication_app_frontend.gr3
-            sonar.sources=.
-
+      
       - task: NodeTool@0
         displayName: 'Install Node.js'
         inputs:
@@ -46,15 +34,6 @@ stages:
           npm install
           npm run build
         displayName: 'Build Frontend'
-
-      - task: SonarQubeAnalyze@5
-        displayName: 'Run SonarQube Analysis'
-
-      - task: SonarQubePublish@5
-        displayName: 'Publish SonarQube Results'
-        inputs:
-          pollingTimeoutSec: '300'
-
 
       - task: Docker@2
         displayName: 'Login to Docker Hub'
@@ -107,6 +86,10 @@ stages:
       - script: |
           kubectl apply -f $(K8S_DIR)/frontend_cluster_ip.yml
           kubectl apply -f $(K8S_DIR)/frontend_deploy.yml
+          
+          # delete old Ingress(if there's a one) to avoid conflict 
+          kubectl delete ingress frontend-ingress -n $(NAMESPACE) || true
+
           kubectl apply -f $(K8S_DIR)/frontend_ingress.yml
           kubectl apply -f $(K8S_DIR)/configmap.yml
         displayName: 'Apply Frontend Manifests'
