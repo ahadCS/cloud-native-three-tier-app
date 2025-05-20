@@ -18,6 +18,12 @@ pool:
 stages:
 - stage: Build
   displayName: 'Build & Push Frontend Image'
+  condition: |
+    or(
+      eq(variables['Build.Reason'], 'Manual'),
+      eq(variables['Build.Reason'], 'Schedule'),
+      changesetIncludes('authentication_app_frontend.gr3/**')
+    )
   jobs:
   - job: Build
     displayName: 'Build'
@@ -120,3 +126,10 @@ stages:
             echo "Application should be accessible at: http://$IP"
           fi
         displayName: 'Show Ingress External IP'
+
+      - script: |
+          echo "Describing frontend pod for more insights..."
+          POD_NAME=$(kubectl get pods -n $(NAMESPACE) -l app=frontend-app -o jsonpath='{.items[0].metadata.name}')
+          kubectl describe pod $POD_NAME -n $(NAMESPACE)
+        displayName: 'Describe Frontend Pod'
+
