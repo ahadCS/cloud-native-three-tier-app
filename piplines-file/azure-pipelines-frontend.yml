@@ -85,7 +85,8 @@ stages:
         displayName: 'Apply Namespace'
 
       - script: |
-        
+         kubectl delete -f $(K8S_DIR)/frontend_cluster_ip.yml
+         kubectl delete -f $(K8S_DIR)/frontend_deploy.yml
          
          kubectl apply -f $(K8S_DIR)/frontend_cluster_ip.yml
          kubectl apply -f $(K8S_DIR)/frontend_deploy.yml
