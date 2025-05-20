@@ -1,4 +1,5 @@
-trigger: none
+trigger:
+ -master
 
 
 
@@ -82,80 +83,96 @@ stages:
         environmentServiceNameAzureRM: '$(azureServiceConnection)'
         workingDirectory: '$(System.DefaultWorkingDirectory)/terraform/solution'
         args: '-auto-approve'
-
-- stage: DeployMonitoring
-  displayName: 'Deploy Ingress, Grafana and Prometheus'
+        # ====================== STAGE 3: Deploy Ingress Controller ======================
+- stage: DeployIngress
+  displayName: 'Step 3: Deploy Ingress Controller + Print IP'
   dependsOn: DeployApp
   jobs:
-    - job: deployMonitoring
-      pool:
-        vmImage: 'ubuntu-latest'
+  - job: deployIngress
+    displayName: 'Install Ingress Controller'
+    pool:
+      vmImage: 'ubuntu-latest'
+    steps:
+    - script: |
+        echo "Installing Helm..."
+        curl https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash
+      displayName: 'Install Helm CLI'
 
-      steps:
-        - task: AzureCLI@2
-          displayName: 'Configure AKS Credentials'
-          inputs:
-            azureSubscription: '$(azureServiceConnection)'
-            scriptType: 'bash'
-            scriptLocation: 'inlineScript'
-            inlineScript: |
-              echo "Getting AKS credentials..."
-              az aks get-credentials \
-                --resource-group devops2-group3-main-rg \
-                --name devops2-group3-main-aks \
-                --overwrite-existing
+    - task: AzureCLI@2
+      displayName: 'Install Ingress NGINX Controller'
+      inputs:
+        azureSubscription: '$(azureServiceConnection)'
+        scriptType: 'bash'
+        scriptLocation: 'inlineScript'
+        inlineScript: |
+          az aks get-credentials --resource-group devops2-group3-main-rg --name devops2-group3-main-aks --overwrite-existing
 
-        - task: AzureCLI@2
-          displayName: 'Install NGINX Ingress Controller'
-          inputs:
-            azureSubscription: '$(azureServiceConnection)'
-            scriptType: 'bash'
-            scriptLocation: 'inlineScript'
-            inlineScript: |
-              echo "Installing NGINX Ingress Controller..."
-              kubectl apply -f https://raw.githubusercontent.com/kubernetes/ingress-nginx/controller-v1.8.1/deploy/static/provider/cloud/deploy.yaml
+          helm repo add ingress-nginx https://kubernetes.github.io/ingress-nginx
+          helm repo update
 
-              echo "Waiting for ingress controller pods to be ready..."
-              kubectl wait --namespace ingress-nginx --for=condition=ready pod --selector=app.kubernetes.io/component=controller --timeout=180s
+          helm install nginx-ingress ingress-nginx/ingress-nginx \
+            --namespace ingress-nginx \
+            --create-namespace \
+            --set controller.service.type=LoadBalancer
 
-        - task: AzureCLI@2
-          displayName: 'Deploy Monitoring Services and Ingress'
-          inputs:
-            azureSubscription: '$(azureServiceConnection)'
-            scriptType: 'bash'
-            scriptLocation: 'inlineScript'
-            inlineScript: |
-              echo "Applying monitoring services..."
-              kubectl apply -f $(System.DefaultWorkingDirectory)/manifests/monitoring/monitoring-services.yml
+          echo "Waiting for External IP..."
+          for i in {1..12}; do
+            IP=$(kubectl get svc nginx-ingress-ingress-nginx-controller -n ingress-nginx -o jsonpath='{.status.loadBalancer.ingress[0].ip}' 2>/dev/null || echo "")
+            if [[ -n "$IP" ]]; then
+              echo "🌐 Ingress External IP: http://$IP"
+              break
+            fi
+            echo "Retry $i: Waiting for IP..."
+            sleep 10
+          done
 
-              echo "Applying ingress configuration..."
-              kubectl apply -f $(System.DefaultWorkingDirectory)/manifests/monitoring/ingress.yml
+# ====================== STAGE 4: Deploy Monitoring ======================
+- stage: DeployMonitoring
+  displayName: 'Step 4: Deploy Monitoring (Prometheus + Grafana)'
+  dependsOn: DeployIngress
+  jobs:
+  - job: deployMonitoring
+    displayName: 'Install Monitoring Stack via Helm'
+    pool:
+      vmImage: 'ubuntu-latest'
+    steps:
+    - script: |
+        echo "Installing Helm..."
+        curl https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash
 
-              echo "Waiting for external IP addresses..."
-              for i in {1..12}; do
-                GRAFANA_IP=$(kubectl get svc grafana-lb -n monitoring -o jsonpath="{.status.loadBalancer.ingress[0].ip}" 2>/dev/null || echo "")
-                PROM_IP=$(kubectl get svc prometheus-lb -n monitoring -o jsonpath="{.status.loadBalancer.ingress[0].ip}" 2>/dev/null || echo "")
+        echo "Add Prometheus Helm repo"
+        helm repo add prometheus-community https://prometheus-community.github.io/helm-charts
+        helm repo update
+      displayName: 'Install Helm CLI and Add Prometheus Repo'
 
-                if [[ -n "$GRAFANA_IP" && -n "$PROM_IP" ]]; then
-                  echo "Found IPs!"
-                  echo "Grafana IP: $GRAFANA_IP"
-                  echo "Prometheus IP: $PROM_IP"
-                  break
-                fi
+    - task: AzureCLI@2
+      displayName: 'Install kube-prometheus-stack + Print IPs'
+      inputs:
+        azureSubscription: '$(azureServiceConnection)'
+        scriptType: 'bash'
+        scriptLocation: 'inlineScript'
+        inlineScript: |
+          az aks get-credentials --resource-group devops2-group3-main-rg --name devops2-group3-main-aks --overwrite-existing
 
-                echo "Retry $i: Waiting for IPs..."
-                sleep 10
-              done
+          helm install monitoring prometheus-community/kube-prometheus-stack \
+            --namespace monitoring \
+            --create-namespace \
+            --set grafana.service.type=LoadBalancer \
+            --set prometheus.service.type=LoadBalancer \
+            --set grafana.adminPassword='admin123'
 
-              if [[ -z "$GRAFANA_IP" || -z "$PROM_IP" ]]; then
-                echo "Failed to get LoadBalancer IPs."
-                exit 1
-              fi
+          echo "Waiting for services to initialize..."
+          for i in {1..12}; do
+            GRAFANA_IP=$(kubectl get svc -n monitoring kube-prometheus-stack-grafana -o jsonpath='{.status.loadBalancer.ingress[0].ip}' 2>/dev/null || echo "")
+            PROMETHEUS_IP=$(kubectl get svc -n monitoring kube-prometheus-stack-prometheus -o jsonpath='{.status.loadBalancer.ingress[0].ip}' 2>/dev/null || echo "")
+            if [[ -n "$GRAFANA_IP" && -n "$PROMETHEUS_IP" ]]; then
+              echo "📊 Grafana URL:     http://$GRAFANA_IP:3000"
+              echo "📈 Prometheus URL: http://$PROMETHEUS_IP:9090"
+              break
+            fi
+            echo "Retry $i: Waiting for IPs..."
+            sleep 10
+          done
 
-              echo "==========================="
-              echo "Grafana URL:     http://$GRAFANA_IP:3000"
-              echo "Prometheus URL:  http://$PROM_IP:9090"
-              echo "==========================="
-
-              echo "Services in 'monitoring' namespace:"
-              kubectl get services -n monitoring
+          echo "Check all monitoring pods:"
+          kubectl get pods -n monitoring || echo "Monitoring pods not found"
