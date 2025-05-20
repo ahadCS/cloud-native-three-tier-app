@@ -26,18 +26,6 @@ stages:
     steps:
       - checkout: self
 
-      - task: SonarQubePrepare@5
-        displayName: 'Prepare SonarQube Analysis'
-        inputs:
-          SonarQube: 'sonarqube-b-connection'      #  Service Connection
-          scannerMode: 'CLI'
-          configMode: 'manual'
-          cliProjectKey: 'Authentication-Backend'
-          cliProjectName: 'Authentication Backend'
-          extraProperties: |
-            sonar.projectBaseDir=authentication_app_backend.gr3
-            sonar.sources=.
-
       - task: NodeTool@0
         displayName: 'Install Node.js'
         inputs:
@@ -48,14 +36,6 @@ stages:
           npm install
           npm run build
         displayName: 'Build Backend'
-
-      - task: SonarQubeAnalyze@5
-        displayName: 'Run SonarQube Analysis'
-
-      - task: SonarQubePublish@5
-        displayName: 'Publish SonarQube Results'
-        inputs:
-          pollingTimeoutSec: '300'
 
       - task: Docker@2
         displayName: 'Login to Docker Hub'
@@ -73,6 +53,7 @@ stages:
           buildContext: 'authentication_app_backend.gr3'
           tags: |
             $(TAG)
+            latest
  
 # === Stage: Deploy to AKS ===
 - stage: Deploy
@@ -108,6 +89,7 @@ stages:
       - script: |
           kubectl apply -f $(K8S_DIR)/backend_deploy.yml
           kubectl apply -f $(K8S_DIR)/backend_cluster_ip.yml
+          kubectl apply -f $(K8S_DIR)/backend_ingress.yml
         displayName: 'Apply Backend Deployment & Service'
 
    
