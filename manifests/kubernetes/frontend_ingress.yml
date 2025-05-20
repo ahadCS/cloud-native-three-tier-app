@@ -3,6 +3,8 @@ kind: Ingress
 metadata:
  name: frontend-ingress
  namespace: capstone-project
+ annotations:
+   nginx.ingress.kubernetes.io/use-regex: "true"
 spec:
  ingressClassName: nginx
  rules:
