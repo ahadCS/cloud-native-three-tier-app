@@ -92,4 +92,31 @@ stages:
           kubectl apply -f $(K8S_DIR)/backend_ingress.yml
         displayName: 'Apply Backend Deployment & Service'
 
-   
+      - script: |
+          echo "Checking Pod status..."
+          kubectl get pods -n capstone-project -o wide
+          kubectl get pods -n ingress-nginx
+          kubectl get svc -n ingress-nginx
+        displayName: 'Check Pod Status'
+
+      - script: |
+          echo "Checking Ingress in namespace capstone-project..."
+          kubectl get ingress -n capstone-project
+        displayName: 'Check Ingress Status'
+
+      - script: |
+          echo "Getting Ingress IP..."
+          IP=$(kubectl get ingress backend-ingress -n capstone-project -o jsonpath='{.status.loadBalancer.ingress[0].ip}')
+          if [ -z "$IP" ]; then
+            echo "Ingress IP not assigned yet."
+          else
+            echo "Application should be accessible at: http://$IP"
+          fi
+        displayName: 'Show Ingress External IP'
+
+      - script: |
+          echo "Describing Backend pod for more insights..."
+          POD_NAME=$(kubectl get pods -n $(NAMESPACE) -l app=backend-app -o jsonpath='{.items[0].metadata.name}')
+          kubectl describe pod $POD_NAME -n $(NAMESPACE)
+        displayName: 'Describe Backend Pod'
+
