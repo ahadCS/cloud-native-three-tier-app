@@ -108,6 +108,7 @@ stages:
           kubectl apply -f $(K8S_DIR)/frontend_cluster_ip.yml
           kubectl apply -f $(K8S_DIR)/frontend_deploy.yml
           kubectl apply -f $(K8S_DIR)/frontend_ingress.yml
+          kubectl apply -f $(K8S_DIR)/configmap.yml
         displayName: 'Apply Frontend Manifests'
 
       - script: |
@@ -119,9 +120,7 @@ stages:
           echo "Checking Pod status..."
           kubectl get pods -n capstone-project -o wide
           kubectl get pods -n ingress-nginx
-          kubectl get svc -n capstone-project
           kubectl get svc -n ingress-nginx
-          kubectl describe pod frontend-deploy-5f6c48bdc-7k4h9 -n capstone-project
         displayName: 'Check Pod Status'
 
       - script: |
