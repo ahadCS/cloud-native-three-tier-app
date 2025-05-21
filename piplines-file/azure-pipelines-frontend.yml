@@ -111,10 +111,12 @@ stages:
          kubectl apply -f $(K8S_DIR)/frontend_cluster_ip.yml
          kubectl apply -f $(K8S_DIR)/frontend_deploy.yml
 
-         # delete old Ingress(if there's a one) to avoid conflict 
-         kubectl delete ingress frontend-ingress -n $(NAMESPACE) || true
+          kubectl apply -f $(K8S_DIR)/frontend_ingress.yml
 
-         kubectl apply -f $(K8S_DIR)/frontend_ingress.yml
+      # delete old Ingress(if there's a one) to avoid conflict 
+      # kubectl delete ingress frontend-ingress -n $(NAMESPACE) || true
+
+        
         displayName: 'Apply Frontend Manifests'
 
       - script: |
