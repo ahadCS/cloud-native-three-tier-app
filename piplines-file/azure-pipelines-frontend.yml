@@ -133,7 +133,7 @@ stages:
           echo "Checking Ingress in namespace capstone-project..."
           kubectl get ingress -n capstone-project
         displayName: 'Check Ingress Status'
-
+# for check
       - script: |
           echo "Getting Ingress IP..."
           IP=$(kubectl get ingress frontend-ingress -n capstone-project -o jsonpath='{.status.loadBalancer.ingress[0].ip}')
