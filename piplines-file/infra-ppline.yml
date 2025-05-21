@@ -90,7 +90,7 @@ stages:
         backendAzureRmResourceGroupName: 'devops2-group3-storge-rg'
         backendAzureRmStorageAccountName: 'devops2group3storge'
         backendAzureRmContainerName: 'tfstate'
-        backendAzureRmKey: 'Final-project/terraform.tfstate'
+        backendAzureRmKey: 'terraform.tfstate'
         workingDirectory: '$(System.DefaultWorkingDirectory)/terraform/solution'
 
     - task: TerraformTaskV4@4
@@ -136,10 +136,11 @@ stages:
           helm repo add ingress-nginx https://kubernetes.github.io/ingress-nginx
           helm repo update
 
-          helm upgrade --install nginx-ingress ingress-nginx/ingress-nginx \
-
+          helm install nginx-ingress ingress-nginx/ingress-nginx \
             --namespace ingress-nginx \
             --create-namespace \
+            --set controller.ingressClassResource.name=nginx \
+            --set controller.ingressClassResource.controllerValue=k8s.io/ingress-nginx \
             --set controller.service.type=LoadBalancer
 
           echo "Waiting for External IP..."
