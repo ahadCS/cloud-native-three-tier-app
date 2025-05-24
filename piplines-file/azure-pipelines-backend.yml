@@ -4,11 +4,11 @@ pr: none             # do not auto-trigger on PRs
 variables:
   AZURE_SERVICE_CONNECTION: 'azure-connection'         # name of Service Connection
   DOCKER_CONNECTION: 'dockerhub_connection'              # Docker Registry service connection
-  dockerHubUsername: 'ahad8'                             # Docker Hub username
+  dockerHubUsername: ' '                             # Docker Hub username
   IMAGE_NAME: 'backend'                                 # repo name on Docker Hub
   TAG: '$(Build.BuildId)'                                # image tag based on build ID
-  RESOURCE_GROUP:     'devops2-group3-main-rg'   # RG that contains AKS
-  AKS_CLUSTER_NAME:   'devops2-group3-main-aks'  #  AKS cluster name
+  RESOURCE_GROUP:     ''   # RG that contains AKS
+  AKS_CLUSTER_NAME:   ''  #  AKS cluster name
   K8S_DIR:            'manifests/kubernetes'                        # path to K8s manifests
   NAMESPACE:          'capstone-project'                      
 
@@ -35,7 +35,7 @@ stages:
           cliProjectKey: 'Authentication-Backend'
           cliProjectName: 'Authentication Backend'
           extraProperties: |
-            sonar.projectBaseDir=authentication_app_backend.gr3
+            sonar.projectBaseDir=authentication_app_backend
             sonar.sources=.
 
 
@@ -45,7 +45,7 @@ stages:
           versionSpec: '18.x'
 
       - script: |
-          cd authentication_app_backend.gr3
+          cd authentication_app_backend
           npm install
           npm run build
         displayName: 'Build Backend'
@@ -70,8 +70,8 @@ stages:
           containerRegistry: '$(DOCKER_CONNECTION)'
           repository: '$(dockerHubUsername)/$(IMAGE_NAME)'
           command: buildAndPush
-          dockerfile: 'authentication_app_backend.gr3/Dockerfile'
-          buildContext: 'authentication_app_backend.gr3'
+          dockerfile: 'authentication_app_backend/Dockerfile'
+          buildContext: 'authentication_app_backend'
           tags: |
             $(TAG)
             latest

@@ -18,15 +18,15 @@ spec:
    spec:
      containers:
        - name: backend-app
-         image: ahad8/backend:latest
+         image: /backend:latest
          ports:
            - containerPort: 3000
          env:
            - name: DB_SERVER
-             value: "devops2-group3-main-sql.database.windows.net"
+             value: "" # Add Server name
            - name: DB_USER
-             value: "sqladmin"
+             value: "" # Add Db user
            - name: DB_PASSWORD
-             value: "Abc123456789**"
+             value: "" # Add Db pass
            - name: DB_NAME
-             value: "devops2-group3-db"
+             value: "" # Add Db name

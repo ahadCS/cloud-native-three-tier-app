@@ -1,5 +1,5 @@
 locals {
-prefix                 = "devops2-group3-main"
+prefix                 = "main"
   location               = "West US 2"
   default_node_pool_name = "gr"
 
@@ -14,7 +14,7 @@ prefix                 = "devops2-group3-main"
     server_version       = "12.0"
     dbsize               = 1
     zone_redundant       = false
-    sql_database_name    = "devops2-group3-db"
+    sql_database_name    = "db"
     sku_name             = "Basic"
     storage_account_type = "Local"
 

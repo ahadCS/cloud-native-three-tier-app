@@ -4,11 +4,11 @@ pr: none             # do not auto-trigger on PRs
 variables:
   AZURE_SERVICE_CONNECTION: 'azure-connection'
   DOCKER_CONNECTION: 'dockerhub_connection'
-  dockerHubUsername: 'ahad8'
+  dockerHubUsername: ''
   IMAGE_NAME: 'frontend'
   TAG: '$(Build.BuildId)'
-  RESOURCE_GROUP: 'devops2-group3-main-rg'
-  AKS_CLUSTER_NAME: 'devops2-group3-main-aks'
+  RESOURCE_GROUP:     ''   # RG that contains AKS
+  AKS_CLUSTER_NAME:   ''  #  AKS cluster name
   K8S_DIR: 'manifests/kubernetes'
   NAMESPACE: 'capstone-project'
 
@@ -33,7 +33,7 @@ stages:
           cliProjectKey: 'Authentication-Frontend'
           cliProjectName: 'Authentication Frontend'
           extraProperties: |
-            sonar.projectBaseDir=authentication_app_frontend.gr3
+            sonar.projectBaseDir=authentication_app_frontend
             sonar.sources=.
       
       - task: NodeTool@0
@@ -42,7 +42,7 @@ stages:
           versionSpec: '18.x'
 
       - script: |
-          cd authentication_app_frontend.gr3
+          cd authentication_app_frontend
           npm install
           npm run build
         displayName: 'Build Frontend'
@@ -62,15 +62,15 @@ stages:
           containerRegistry: '$(DOCKER_CONNECTION)'
           command: login
 
-      # خطوة بناء الصورة تنفذ فقط إذا ما كانت موجودة
+      
       - task: Docker@2
         displayName: 'Build & Push to Docker Hub'
         inputs:
           containerRegistry: '$(DOCKER_CONNECTION)'
           repository: '$(dockerHubUsername)/$(IMAGE_NAME)'
           command: buildAndPush
-          dockerfile: 'authentication_app_frontend.gr3/Dockerfile'
-          buildContext: 'authentication_app_frontend.gr3'
+          dockerfile: 'authentication_app_frontend/Dockerfile'
+          buildContext: 'authentication_app_frontend'
           tags: |
             $(TAG)
             latest
@@ -105,19 +105,18 @@ stages:
         displayName: 'Apply Namespace'
 
       - script: |
-        
-         
+         kubectl delete -f $(K8S_DIR)/frontend_cluster_ip.yml
+         kubectl apply -f $(K8S_DIR)/frontend_cluster_ip.yml
+
+         kubectl delete -f $(K8S_DIR)/frontend_deploy.yml
+         kubectl apply -f $(K8S_DIR)/frontend_deploy.yml
+
          kubectl apply -f $(K8S_DIR)/frontend_cluster_ip.yml
          kubectl apply -f $(K8S_DIR)/frontend_deploy.yml
 
-          kubectl apply -f $(K8S_DIR)/frontend_ingress.yml
+         kubectl apply -f $(K8S_DIR)/frontend_ingress.yml
 
-      # delete old Ingress(if there's a one) to avoid conflict 
-      # kubectl delete ingress frontend-ingress -n $(NAMESPACE) || true
-       #kubectl delete -f $(K8S_DIR)/frontend_cluster_ip.yml
-        # kubectl delete -f $(K8S_DIR)/frontend_deploy.yml
 
-        
         displayName: 'Apply Frontend Manifests'
 
       - script: |
